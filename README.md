@@ -5,3 +5,10 @@
   ```pip install -r requirements.txt```
 3. Run script:
    ```python web_scraper.py```
+
+
+Sample result:
+
+
+Keyword 'happiness' found in URL: https://quotes.toscrape.com/
+Time taken: 12.47 seconds
