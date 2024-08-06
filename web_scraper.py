@@ -1,5 +1,5 @@
-import aiohttp
 import asyncio
+from pyppeteer import launch
 from bs4 import BeautifulSoup
 import time
 
@@ -9,24 +9,28 @@ class WebScraper:
         self.keywords = keywords
         self.max_concurrent_requests = max_concurrent_requests
 
-    async def fetch(self, session, url):
-        async with session.get(url) as response:
-            return await response.text()
+    async def fetch(self, browser, url):
+        page = await browser.newPage()
+        await page.goto(url, {'waitUntil': 'networkidle2'})
+        content = await page.content()
+        await page.close()
+        return content
 
     async def fetch_all(self):
-        async with aiohttp.ClientSession() as session:
-            tasks = []
-            semaphore = asyncio.Semaphore(self.max_concurrent_requests)
-            for url in self.urls:
-                task = asyncio.ensure_future(self.bounded_fetch(semaphore, session, url))
-                tasks.append(task)
-            results = await asyncio.gather(*tasks)
-            return results
+        browser = await launch(headless=True)
+        tasks = []
+        semaphore = asyncio.Semaphore(self.max_concurrent_requests)
+        for url in self.urls:
+            task = asyncio.ensure_future(self.bounded_fetch(semaphore, browser, url))
+            tasks.append(task)
+        results = await asyncio.gather(*tasks)
+        await browser.close()
+        return results
 
-    async def bounded_fetch(self, semaphore, session, url):
+    async def bounded_fetch(self, semaphore, browser, url):
         async with semaphore:
             try:
-                response = await self.fetch(session, url)
+                response = await self.fetch(browser, url)
                 return url, response
             except Exception as e:
                 return url, str(e)
